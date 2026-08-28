@@ -1,0 +1,29 @@
+services:
+  dvwa:
+    image: ghcr.io/digininja/dvwa:latest
+    depends_on:
+      - db
+    environment:
+      DB_SERVER: db
+    ports:
+      - "127.0.0.1:4280:80"
+    networks:
+      - adexa_lab
+
+  db:
+    image: mariadb:10
+    environment:
+      MYSQL_ROOT_PASSWORD: dvwa
+      MYSQL_DATABASE: dvwa
+      MYSQL_USER: dvwa
+      MYSQL_PASSWORD: p@ssw0rd
+    volumes:
+      - dvwa_db:/var/lib/mysql
+    networks:
+      - adexa_lab
+
+networks:
+  adexa_lab:
+
+volumes:
+  dvwa_db:

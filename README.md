@@ -332,6 +332,29 @@ The current Python dependencies include:
 
 ---
 
+## Quick Start — Local DVWA Demo
+
+The fastest way to try ADEXA is with the included Docker Compose lab. Make sure Docker and Docker Compose are installed first.
+
+> **Safety:** DVWA is intentionally vulnerable. The included lab binds it to `127.0.0.1` only.
+
+### Start the lab
+
+    docker compose up -d
+    ./scripts/setup_dvwa.sh
+
+Then run ADEXA:
+
+    python3 adexa.py --url http://127.0.0.1:4280/vulnerabilities/sqli/ --param id --payload "'" --method GET
+
+A successful run should end with `Status: Success` and `Verified: Yes`.
+
+When finished:
+
+    docker compose down
+
+---
+
 ## Usage
 
 > **⚠️ Authorization Required:** The commands and examples below are intended only for systems you own or have explicit authorization to test.
@@ -350,7 +373,7 @@ For an authorized DVWA laboratory, a test can be started using:
 
 ```bash
 python3 adexa.py \
-  --url http://127.0.0.1/dvwa/vulnerabilities/sqli/ \
+  --url http://127.0.0.1:4280/vulnerabilities/sqli/ \
   --param id \
   --payload "'" \
   --method GET

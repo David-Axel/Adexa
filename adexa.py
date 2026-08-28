@@ -27,12 +27,6 @@ def split_dvwa_url(url: str):
     app_prefix = full_path[:idx]
     vuln_path = full_path[idx:]
 
-    if not app_prefix:
-        raise ValueError(
-            "Could not determine DVWA app root from URL. "
-            "Expected something like /dvwa/vulnerabilities/sqli/"
-        )
-
     base_url = f"{parsed.scheme}://{parsed.netloc}{app_prefix}"
     return base_url, vuln_path, parsed.query
 
