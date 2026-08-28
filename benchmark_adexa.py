@@ -5,7 +5,7 @@ import subprocess
 import re
 from pathlib import Path
 
-URL = "http://192.168.64.7/dvwa/vulnerabilities/sqli/"
+URL = "http://127.0.0.1:4280/vulnerabilities/sqli/"
 PARAM = "id"
 
 payloads = [
@@ -99,6 +99,8 @@ for payload in payloads:
     final_payload_val = final_payload.group(1).strip() if final_payload else "NONE"
     ai_decision_val = ai_decision.group(1).strip() if ai_decision else "NONE"
     verified_val = verified.group(1).strip() if verified else "UNKNOWN"
+    if status_val.lower() == "success" and verified_val.lower() == "yes" and final_payload_val.lower() in {"none", "null"}:
+        final_payload_val = payload
     used_memory_case_val = used_memory_case.group(1).strip() if used_memory_case else "NONE"
     memory_match_reason_val = memory_match_reason.group(1).strip() if memory_match_reason else "NONE"
 
