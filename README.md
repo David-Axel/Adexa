@@ -241,12 +241,12 @@ ADEXA/
 │   ├── models.py
 │   └── run_store.py
 │
+├── dataset/
 ├── debugger/
 │   ├── crash_parser.py
 │   ├── gdb_runner.py
 │   └── offset_finder.py
 │
-├── dataset/
 ├── docs/
 │   └── images/
 │
@@ -263,6 +263,7 @@ ADEXA/
 ├── benchmark_adexa.py
 ├── compose.yml
 ├── requirements.txt
+├── setup.sh
 └── README.md
 ```
 
@@ -281,12 +282,13 @@ ADEXA/
 | `gui/`           | Experimental graphical interface                             |
 | `scripts/`       | Local laboratory setup scripts                               |
 | `compose.yml`    | Docker-based DVWA and MariaDB laboratory                     |
+| `setup.sh`       | Automated ADEXA and laboratory setup                         |
 
 ---
 
-# Installation
+## Installation
 
-## Prerequisites
+### Prerequisites
 
 ADEXA is currently developed and tested primarily on Linux/Kali Linux.
 
@@ -296,7 +298,6 @@ You will need:
 * Git
 * Docker
 * Docker Compose
-* an authorized security-testing environment
 
 For experimental binary-analysis functionality:
 
@@ -306,129 +307,37 @@ For supported local AI-assisted functionality:
 
 * Ollama
 
-> **Note:** The current SQL injection laboratory does not require a separate DVWA installation. ADEXA provides a reproducible local DVWA environment through Docker Compose.
+### Quick Start
 
----
+ADEXA includes an automated setup script that prepares the Python environment, installs dependencies, starts the local DVWA laboratory, and initializes its database.
 
-## Clone the Repository
+#### 1. Clone ADEXA
 
 ```bash
 git clone https://github.com/David-Axel/Adexa.git
 cd Adexa
 ```
 
----
-
-## Create a Virtual Environment
+#### 2. Run the setup script
 
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
+chmod +x setup.sh
+./setup.sh
 ```
 
----
+The script checks for Python, Git, Docker, and Docker Compose, creates the Python virtual environment, installs the required dependencies, starts the Docker-based DVWA laboratory, and initializes DVWA.
 
-## Install Dependencies
-
-```bash
-pip install -r requirements.txt
-```
-
-The current Python dependencies include:
-
-* `requests`
-* `flask`
-
----
-
-# Local DVWA Laboratory
-
-ADEXA includes a Docker-based DVWA laboratory for controlled SQL injection research and development.
-
-The laboratory consists of:
-
-```text
-ADEXA
-   │
-   ▼
-Docker Compose
-   │
-   ├── DVWA
-   │     │
-   │     └── 127.0.0.1:4280
-   │
-   └── MariaDB
-         │
-         └── Persistent Docker volume
-```
-
-The Docker environment uses:
-
-* DVWA from `ghcr.io/digininja/dvwa:latest`
-* MariaDB 10
-* an isolated Docker network
-* a persistent database volume
-* local-only port exposure
-
-The DVWA web service is bound to:
-
-```text
-127.0.0.1:4280
-```
-
-This keeps the intentionally vulnerable application accessible only from the local machine.
-
-> **Safety:** DVWA is intentionally vulnerable and must only be used for authorized security research, education, and controlled testing.
-
----
-
-## Start the Laboratory
-
-From the ADEXA repository:
-
-```bash
-docker compose up -d
-```
-
-Then initialize the DVWA database:
-
-```bash
-./scripts/setup_dvwa.sh
-```
-
-The setup script waits for DVWA to become available, retrieves the required setup token, and initializes the database automatically.
-
-Once initialized, DVWA is available at:
+DVWA will be available locally at:
 
 ```text
 http://127.0.0.1:4280
 ```
 
----
-
-## Stop the Laboratory
-
-When finished:
+#### 3. Run ADEXA
 
 ```bash
-docker compose down
-```
+source .venv/bin/activate
 
-The database is stored in the Docker volume configured by `compose.yml`.
-
----
-
-# Quick Start
-
-Once the local DVWA laboratory is running, ADEXA can be started through its primary CLI entry point:
-
-```bash
-python3 adexa.py
-```
-
-For the local DVWA SQL injection laboratory:
-
-```bash
 python3 adexa.py \
   --url http://127.0.0.1:4280/vulnerabilities/sqli/ \
   --param id \
@@ -436,37 +345,23 @@ python3 adexa.py \
   --method GET
 ```
 
-ADEXA then handles the adaptive workflow:
+> **Safety:** DVWA is intentionally vulnerable. The included laboratory is bound to `127.0.0.1` and should only be used for authorized security research, education, and controlled testing.
 
-```text
-Input
-  ↓
-Execute
-  ↓
-Observe
-  ↓
-Analyze
-  ↓
-Repair
-  ↓
-Execute Candidate
-  ↓
-Verify
-  ↓
-Store Result
+### Stop the Laboratory
+
+When finished:
+
+```bash
+docker compose -f compose.yml down
 ```
-
-A successful execution should report a successful final state and verification result.
 
 ---
 
-# Usage
+## Usage
 
 > **⚠️ Authorization Required:** The commands and examples below are intended only for systems you own or have explicit authorization to test.
 
-> **Only use ADEXA against systems you own or have explicit authorization to test.**
-
-## Web / SQL Injection Mode
+### Web / SQL Injection Mode
 
 The primary user-facing entry point is:
 
@@ -474,7 +369,7 @@ The primary user-facing entry point is:
 python3 adexa.py
 ```
 
-For an authorized DVWA laboratory:
+For the local DVWA laboratory:
 
 ```bash
 python3 adexa.py \
@@ -483,8 +378,6 @@ python3 adexa.py \
   --payload "'" \
   --method GET
 ```
-
-Replace the URL with the address of another authorized testing environment only when you have explicit permission to test it.
 
 During a web execution, ADEXA can:
 
@@ -519,7 +412,7 @@ For normal interaction with ADEXA, `adexa.py` should generally be used instead.
 
 ---
 
-# Benchmark
+## Benchmark
 
 ADEXA includes a benchmark script for evaluating the current repair pipeline:
 
@@ -539,7 +432,31 @@ The benchmark can be used to analyze characteristics such as:
 
 ---
 
-# Execution Logs
+## Testing
+
+ADEXA uses `pytest` for automated testing.
+
+Run the test suite with:
+
+```bash
+pytest -q
+```
+
+Tests that require the DVWA laboratory are skipped automatically when DVWA is unavailable.
+
+To run the complete integration workflow, start the local DVWA laboratory first:
+
+```bash
+docker compose -f compose.yml up -d
+./scripts/setup_dvwa.sh
+pytest -q
+```
+
+This allows the regular test suite to remain usable even when the external laboratory is not running.
+
+---
+
+## Execution Logs
 
 ADEXA creates structured execution artifacts for individual runs.
 
@@ -569,7 +486,7 @@ This keeps development artifacts separate from the public source repository.
 
 ---
 
-# Experimental Binary Support
+## Experimental Binary Support
 
 ADEXA also contains experimental components for binary exploit analysis and repair.
 
@@ -586,7 +503,7 @@ Binary support remains experimental and is not currently the primary development
 
 ---
 
-# Evaluation
+## Evaluation
 
 ADEXA is evaluated on more than whether it can simply produce another payload.
 
@@ -605,11 +522,11 @@ A major development objective is to evaluate whether ADEXA's AI-assisted repair 
 
 ---
 
-# Roadmap
+## Roadmap
 
 ADEXA is currently transitioning from a university research prototype toward a broader adaptive security-testing framework.
 
-## SQL Injection
+### SQL Injection
 
 * [x] Adaptive execution loop
 * [x] SQLi repair pipeline
@@ -618,14 +535,17 @@ ADEXA is currently transitioning from a university research prototype toward a b
 * [x] Repair memory
 * [x] Benchmark framework
 * [x] Reproducible local DVWA laboratory
+* [x] Basic automated test suite
 * [ ] Expand SQLi training dataset
 * [ ] Evaluate on completely unseen payloads
 * [ ] Improve repair strategy classification
 * [ ] Improve candidate diversity
 * [ ] Benchmark AI-assisted repair against baseline approaches
 
-## Platform
+### Platform
 
+* [x] Automated setup script
+* [x] Docker-based local laboratory
 * [ ] Simplify installation and configuration
 * [ ] Improve CLI
 * [ ] Improve reporting
@@ -635,7 +555,7 @@ ADEXA is currently transitioning from a university research prototype toward a b
 * [ ] Improve automated testing
 * [ ] Improve contributor workflow
 
-## Future Vulnerability Classes
+### Future Vulnerability Classes
 
 Potential future research includes:
 
@@ -646,7 +566,7 @@ Potential future research includes:
 
 ---
 
-# Long-Term Vision
+## Long-Term Vision
 
 ADEXA's long-term objective extends beyond SQL injection payload repair.
 
@@ -684,7 +604,7 @@ The goal is to investigate how **adaptive reasoning, execution, memory, and veri
 
 ---
 
-# Responsible Use
+## Responsible Use
 
 ADEXA is intended exclusively for:
 
@@ -703,13 +623,13 @@ Users are responsible for ensuring that their activities comply with applicable 
 
 ---
 
-# License
+## License
 
 ADEXA is distributed under the terms provided in the [`LICENSE`](LICENSE) file.
 
 ---
 
-# Author
+## Author
 
 **David-Axel Kacou**
 
@@ -719,4 +639,6 @@ Cybersecurity & Digital Forensics
 
 > ADEXA is an experimental research project under active development and should not currently be considered a production-ready penetration-testing platform.
 
+```
+```
 
