@@ -1,3 +1,4 @@
+````markdown
 # ADEXA
 
 > [!WARNING]
@@ -7,11 +8,11 @@
 >
 > **Do not use ADEXA against systems, applications, networks, or infrastructure without explicit permission from the owner.**
 
-### Adaptive Exploit Repair and Verification Framework
+## Adaptive Exploit Repair and Verification Framework
 
 **ADEXA** is an AI-assisted cybersecurity research framework that analyzes failed security-testing payloads, generates repaired candidates, and verifies whether the repaired payload succeeds against an authorized test environment.
 
-Instead of stopping when an exploit attempt fails, ADEXA follows an adaptive loop:
+Instead of stopping when a security-testing payload fails, ADEXA follows an adaptive loop:
 
 **Execute → Observe → Analyze → Repair → Verify → Learn**
 
@@ -21,7 +22,7 @@ Instead of stopping when an exploit attempt fails, ADEXA follows an adaptive loo
 
 ## The Problem
 
-Automated security-testing tools can detect and test vulnerabilities using predefined payloads. However, when an exploit attempt fails because of malformed syntax, incorrect assumptions, execution context, or other issues, adapting the payload can require manual intervention from a penetration tester.
+Automated security-testing tools can detect and test vulnerabilities using predefined payloads. However, when a security-testing attempt fails because of malformed syntax, incorrect assumptions, execution context, or other issues, adapting the payload can require manual intervention from a security tester.
 
 ADEXA explores whether part of this iterative process can be automated.
 
@@ -70,28 +71,14 @@ ADEXA receives a security-testing payload, executes it against an authorized tes
 <p align="center">
   <img src="docs/images/adexa-demo.png"
        alt="ADEXA payload repair and verification demonstration"
-       width="850">
-</p>
-
-<p align="center">
-  <em>Example of ADEXA operating in a controlled security-testing environment.</em>
-</p>
-
----
-
-## Demo
-
-ADEXA analyzes a failed payload, selects a repair strategy, generates a new candidate, and verifies whether the repaired payload successfully executes.
-
-<p align="center">
-  <img src="docs/images/adexa-demo.png"
-       alt="ADEXA payload repair and verification demo"
-       width="1500">
+       width="900">
 </p>
 
 <p align="center">
   <em>Example of ADEXA repairing and verifying a payload in a controlled DVWA environment.</em>
 </p>
+
+---
 
 ## How ADEXA Works
 
@@ -133,7 +120,7 @@ ADEXA analyzes a failed payload, selects a repair strategy, generates a new cand
            Store Result        │
                                │
                          Repeat Loop
-```
+````
 
 This allows ADEXA to treat security testing as an **adaptive process rather than a single exploit attempt**.
 
@@ -147,16 +134,16 @@ The current pipeline can work with malformed or unsuccessful SQL injection paylo
 
 Current capabilities include:
 
-- malformed payload analysis,
-- syntax and quotation repair,
-- Boolean-based SQLi adaptation,
-- time-based SQLi adaptation,
-- candidate generation,
-- candidate scoring,
-- automated execution,
-- exploit verification,
-- previous-repair reuse,
-- and structured iteration logging.
+* malformed payload analysis,
+* syntax and quotation repair,
+* Boolean-based SQLi adaptation,
+* time-based SQLi adaptation,
+* candidate generation,
+* candidate scoring,
+* automated execution,
+* exploit verification,
+* previous-repair reuse,
+* and structured iteration logging.
 
 SQL injection represents **ADEXA's first specialist capability**, rather than the intended final scope of the framework.
 
@@ -195,12 +182,12 @@ Verification
 
 AI-assisted components can contribute to:
 
-- interpreting failure information,
-- selecting repair strategies,
-- rewriting unsuccessful payloads,
-- generating repair candidates,
-- ranking candidates,
-- and using previous successful cases as context.
+* interpreting failure information,
+* selecting repair strategies,
+* rewriting unsuccessful payloads,
+* generating repair candidates,
+* ranking candidates,
+* and using previous successful cases as context.
 
 ADEXA does not assume that an AI-generated candidate is correct simply because it appears syntactically valid.
 
@@ -259,67 +246,89 @@ ADEXA/
 │   ├── gdb_runner.py
 │   └── offset_finder.py
 │
+├── dataset/
 ├── docs/
 │   └── images/
 │
 ├── exploit_tests/
 ├── gui/
 ├── poc_specs/
+├── scripts/
+│   └── setup_dvwa.sh
 ├── utils/
 ├── web_engine/
 │
 ├── adexa.py
 ├── main.py
 ├── benchmark_adexa.py
+├── compose.yml
 ├── requirements.txt
 └── README.md
 ```
 
 ### Main Components
 
-| Component | Purpose |
-|---|---|
-| `ai_engine/` | AI-assisted analysis, repair generation, scoring, and memory |
-| `backends/` | Web and experimental binary execution backends |
-| `core/` | Main adaptive loop, internal models, and run storage |
-| `debugger/` | Crash parsing, GDB execution, and offset analysis |
-| `exploit_tests/` | Controlled local exploit-testing material |
-| `poc_specs/` | Proof-of-concept specifications |
-| `web_engine/` | Web vulnerability-analysis and processing components |
-| `gui/` | Experimental graphical interface |
+| Component        | Purpose                                                      |
+| ---------------- | ------------------------------------------------------------ |
+| `ai_engine/`     | AI-assisted analysis, repair generation, scoring, and memory |
+| `backends/`      | Web and experimental binary execution backends               |
+| `core/`          | Main adaptive loop, internal models, and run storage         |
+| `dataset/`       | Dataset-related validation and evaluation tooling            |
+| `debugger/`      | Crash parsing, GDB execution, and offset analysis            |
+| `exploit_tests/` | Controlled local exploit-testing material                    |
+| `poc_specs/`     | Proof-of-concept specifications                              |
+| `web_engine/`    | Web vulnerability-analysis and processing components         |
+| `gui/`           | Experimental graphical interface                             |
+| `scripts/`       | Local laboratory setup scripts                               |
+| `compose.yml`    | Docker-based DVWA and MariaDB laboratory                     |
 
 ---
 
-## Installation
+# Installation
 
-### Prerequisites
+## Prerequisites
 
 ADEXA is currently developed and tested primarily on Linux/Kali Linux.
 
 You will need:
 
-- Python 3
-- Git
-- an authorized security-testing environment
-- DVWA for the current SQL injection workflow
-- GDB for experimental binary-analysis functionality
-- Ollama when using supported local AI-assisted functionality
+* Python 3
+* Git
+* Docker
+* Docker Compose
+* an authorized security-testing environment
 
-### 1. Clone the Repository
+For experimental binary-analysis functionality:
+
+* GDB
+
+For supported local AI-assisted functionality:
+
+* Ollama
+
+> **Note:** The current SQL injection laboratory does not require a separate DVWA installation. ADEXA provides a reproducible local DVWA environment through Docker Compose.
+
+---
+
+## Clone the Repository
 
 ```bash
 git clone https://github.com/David-Axel/Adexa.git
 cd Adexa
 ```
 
-### 2. Create a Virtual Environment
+---
+
+## Create a Virtual Environment
 
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
 ```
 
-### 3. Install Dependencies
+---
+
+## Install Dependencies
 
 ```bash
 pip install -r requirements.txt
@@ -327,49 +336,97 @@ pip install -r requirements.txt
 
 The current Python dependencies include:
 
-- `requests`
-- `flask`
+* `requests`
+* `flask`
 
 ---
 
-## Quick Start — Local DVWA Demo
+# Local DVWA Laboratory
 
-The fastest way to try ADEXA is with the included Docker Compose lab. Make sure Docker and Docker Compose are installed first.
+ADEXA includes a Docker-based DVWA laboratory for controlled SQL injection research and development.
 
-> **Safety:** DVWA is intentionally vulnerable. The included lab binds it to `127.0.0.1` only.
+The laboratory consists of:
 
-### Start the lab
+```text
+ADEXA
+   │
+   ▼
+Docker Compose
+   │
+   ├── DVWA
+   │     │
+   │     └── 127.0.0.1:4280
+   │
+   └── MariaDB
+         │
+         └── Persistent Docker volume
+```
 
-    docker compose up -d
-    ./scripts/setup_dvwa.sh
+The Docker environment uses:
 
-Then run ADEXA:
+* DVWA from `ghcr.io/digininja/dvwa:latest`
+* MariaDB 10
+* an isolated Docker network
+* a persistent database volume
+* local-only port exposure
 
-    python3 adexa.py --url http://127.0.0.1:4280/vulnerabilities/sqli/ --param id --payload "'" --method GET
+The DVWA web service is bound to:
 
-A successful run should end with `Status: Success` and `Verified: Yes`.
+```text
+127.0.0.1:4280
+```
+
+This keeps the intentionally vulnerable application accessible only from the local machine.
+
+> **Safety:** DVWA is intentionally vulnerable and must only be used for authorized security research, education, and controlled testing.
+
+---
+
+## Start the Laboratory
+
+From the ADEXA repository:
+
+```bash
+docker compose up -d
+```
+
+Then initialize the DVWA database:
+
+```bash
+./scripts/setup_dvwa.sh
+```
+
+The setup script waits for DVWA to become available, retrieves the required setup token, and initializes the database automatically.
+
+Once initialized, DVWA is available at:
+
+```text
+http://127.0.0.1:4280
+```
+
+---
+
+## Stop the Laboratory
 
 When finished:
 
-    docker compose down
+```bash
+docker compose down
+```
+
+The database is stored in the Docker volume configured by `compose.yml`.
 
 ---
 
-## Usage
+# Quick Start
 
-> **⚠️ Authorization Required:** The commands and examples below are intended only for systems you own or have explicit authorization to test.
-
-> **Only use ADEXA against systems you own or have explicit authorization to test.**
-
-### Web / SQL Injection Mode
-
-The primary user-facing entry point is:
+Once the local DVWA laboratory is running, ADEXA can be started through its primary CLI entry point:
 
 ```bash
 python3 adexa.py
 ```
 
-For an authorized DVWA laboratory, a test can be started using:
+For the local DVWA SQL injection laboratory:
 
 ```bash
 python3 adexa.py \
@@ -379,7 +436,55 @@ python3 adexa.py \
   --method GET
 ```
 
-Replace the URL with the address of your own authorized testing environment.
+ADEXA then handles the adaptive workflow:
+
+```text
+Input
+  ↓
+Execute
+  ↓
+Observe
+  ↓
+Analyze
+  ↓
+Repair
+  ↓
+Execute Candidate
+  ↓
+Verify
+  ↓
+Store Result
+```
+
+A successful execution should report a successful final state and verification result.
+
+---
+
+# Usage
+
+> **⚠️ Authorization Required:** The commands and examples below are intended only for systems you own or have explicit authorization to test.
+
+> **Only use ADEXA against systems you own or have explicit authorization to test.**
+
+## Web / SQL Injection Mode
+
+The primary user-facing entry point is:
+
+```bash
+python3 adexa.py
+```
+
+For an authorized DVWA laboratory:
+
+```bash
+python3 adexa.py \
+  --url http://127.0.0.1:4280/vulnerabilities/sqli/ \
+  --param id \
+  --payload "'" \
+  --method GET
+```
+
+Replace the URL with the address of another authorized testing environment only when you have explicit permission to test it.
 
 During a web execution, ADEXA can:
 
@@ -396,7 +501,7 @@ During a web execution, ADEXA can:
 
 ---
 
-### Direct Core Execution
+## Direct Core Execution
 
 The lower-level execution engine can also be invoked directly:
 
@@ -414,7 +519,7 @@ For normal interaction with ADEXA, `adexa.py` should generally be used instead.
 
 ---
 
-### Benchmark
+# Benchmark
 
 ADEXA includes a benchmark script for evaluating the current repair pipeline:
 
@@ -424,17 +529,17 @@ python3 benchmark_adexa.py
 
 The benchmark can be used to analyze characteristics such as:
 
-- repair success,
-- verification success,
-- payload-family preservation,
-- strategy selection,
-- memory usage,
-- repair quality,
-- and candidate diversity.
+* repair success,
+* verification success,
+* payload-family preservation,
+* strategy selection,
+* memory usage,
+* repair quality,
+* and candidate diversity.
 
 ---
 
-## Execution Logs
+# Execution Logs
 
 ADEXA creates structured execution artifacts for individual runs.
 
@@ -464,81 +569,84 @@ This keeps development artifacts separate from the public source repository.
 
 ---
 
-## Experimental Binary Support
+# Experimental Binary Support
 
 ADEXA also contains experimental components for binary exploit analysis and repair.
 
 These components investigate:
 
-- debugger integration,
-- crash analysis,
-- offset discovery,
-- exploit rewriting,
-- candidate execution,
-- and verification.
+* debugger integration,
+* crash analysis,
+* offset discovery,
+* exploit rewriting,
+* candidate execution,
+* and verification.
 
 Binary support remains experimental and is not currently the primary development focus.
 
 ---
 
-## Evaluation
+# Evaluation
 
 ADEXA is evaluated on more than whether it can simply produce another payload.
 
 Important evaluation metrics include:
 
-- repair success rate,
-- verification success rate,
-- payload-family preservation,
-- number of repair iterations,
-- repair-memory usage,
-- candidate diversity,
-- repair quality,
-- and performance on previously unseen cases.
+* repair success rate,
+* verification success rate,
+* payload-family preservation,
+* number of repair iterations,
+* repair-memory usage,
+* candidate diversity,
+* repair quality,
+* and performance on previously unseen cases.
 
 A major development objective is to evaluate whether ADEXA's AI-assisted repair capabilities materially outperform simpler repair approaches on **held-out, unseen SQL injection cases**.
 
 ---
 
-## Roadmap
+# Roadmap
 
 ADEXA is currently transitioning from a university research prototype toward a broader adaptive security-testing framework.
 
-### SQL Injection
+## SQL Injection
 
-- [x] Adaptive execution loop
-- [x] SQLi repair pipeline
-- [x] Boolean-based verification
-- [x] Time-based verification
-- [x] Repair memory
-- [x] Benchmark framework
-- [ ] Expand SQLi training dataset
-- [ ] Evaluate on completely unseen payloads
-- [ ] Improve repair strategy classification
-- [ ] Improve candidate diversity
-- [ ] Benchmark AI-assisted repair against baseline approaches
+* [x] Adaptive execution loop
+* [x] SQLi repair pipeline
+* [x] Boolean-based verification
+* [x] Time-based verification
+* [x] Repair memory
+* [x] Benchmark framework
+* [x] Reproducible local DVWA laboratory
+* [ ] Expand SQLi training dataset
+* [ ] Evaluate on completely unseen payloads
+* [ ] Improve repair strategy classification
+* [ ] Improve candidate diversity
+* [ ] Benchmark AI-assisted repair against baseline approaches
 
-### Platform
+## Platform
 
-- [ ] Simplify installation and configuration
-- [ ] Improve CLI
-- [ ] Improve reporting
-- [ ] Develop a more complete user interface
-- [ ] Add scanner integrations
-- [ ] Add automated remediation re-testing
+* [ ] Simplify installation and configuration
+* [ ] Improve CLI
+* [ ] Improve reporting
+* [ ] Develop a more complete user interface
+* [ ] Add scanner integrations
+* [ ] Add automated remediation re-testing
+* [ ] Improve automated testing
+* [ ] Improve contributor workflow
 
-### Future Vulnerability Classes
+## Future Vulnerability Classes
 
 Potential future research includes:
 
-- Cross-Site Scripting (XSS)
-- Command Injection
-- Server-Side Request Forgery (SSRF)
-- additional web vulnerability classes
+* Cross-Site Scripting (XSS)
+* Command Injection
+* Server-Side Request Forgery (SSRF)
+* additional web vulnerability classes
 
 ---
 
-## Long-Term Vision
+# Long-Term Vision
 
 ADEXA's long-term objective extends beyond SQL injection payload repair.
 
@@ -576,16 +684,18 @@ The goal is to investigate how **adaptive reasoning, execution, memory, and veri
 
 ---
 
-## Responsible Use
+# Responsible Use
 
 ADEXA is intended exclusively for:
 
-- cybersecurity research,
-- educational environments,
-- controlled laboratories,
-- CTF-style environments,
-- vulnerability research,
-- and systems where the tester has explicit authorization.
+* cybersecurity research,
+* educational environments,
+* controlled laboratories,
+* CTF-style environments,
+* vulnerability research,
+* and systems where the tester has explicit authorization.
+
+The included DVWA environment is intentionally vulnerable and exists solely for controlled security research and development.
 
 **Do not use ADEXA against systems without permission.**
 
@@ -593,30 +703,13 @@ Users are responsible for ensuring that their activities comply with applicable 
 
 ---
 
-## Responsible Use
-
-ADEXA is designed exclusively for **authorized security testing**.
-
-Permitted use includes:
-
-- Systems you own
-- Systems you have explicit permission to test
-- Controlled cybersecurity laboratories
-- DVWA and similar intentionally vulnerable applications
-- CTF and educational environments
-- Authorized penetration testing and security research
-
-ADEXA must not be used to test, exploit, or interfere with systems without authorization.
-
-Users are responsible for ensuring that their use of ADEXA complies with applicable laws, organizational policies, and the scope of their testing authorization.
-
-## License
+# License
 
 ADEXA is distributed under the terms provided in the [`LICENSE`](LICENSE) file.
 
 ---
 
-## Author
+# Author
 
 **David-Axel Kacou**
 
@@ -625,4 +718,5 @@ Cybersecurity & Digital Forensics
 ---
 
 > ADEXA is an experimental research project under active development and should not currently be considered a production-ready penetration-testing platform.
+
 
