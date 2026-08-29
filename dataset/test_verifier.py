@@ -1,45 +1,47 @@
+import pytest
+
 from verifier import DVWAVerifier
 
 
-verifier = DVWAVerifier(
-    base_host="http://192.168.64.7",
-    username="admin",
-    password="password"
-)
+DVWA_URL = "http://192.168.64.7"
 
 
-if not verifier.login():
-    print("❌ Login failed")
-    exit()
+@pytest.fixture
+def verifier():
+    v = DVWAVerifier(
+        base_host=DVWA_URL,
+        username="admin",
+        password="password",
+    )
+
+    if not v.login():
+        pytest.skip(
+            "DVWA is not available. "
+            "Start the authorized DVWA laboratory to run integration tests."
+        )
+
+    return v
 
 
-print("\n=== BOOLEAN TEST ===")
+def test_boolean_repair(verifier):
+    entry = {
+        "broken_payload": "1' AND 1=0 -- -",
+        "strategy": "SWITCH_BOOLEAN",
+        "repaired_payload": "1' AND 1=1 -- -",
+    }
 
-boolean_entry = {
-    "broken_payload": "1' AND 1=0 -- -",
-    "strategy": "SWITCH_BOOLEAN",
-    "repaired_payload": "1' AND 1=1 -- -"
-}
+    verified, details = verifier.verify_repair(entry)
 
-verified, details = verifier.verify_repair(
-    boolean_entry
-)
-
-print("Verified:", verified)
-print(details)
+    assert verified, details
 
 
-print("\n=== TIME TEST ===")
+def test_time_repair(verifier):
+    entry = {
+        "broken_payload": "1' AND SLEP(3) -- -",
+        "strategy": "SWITCH_TIME",
+        "repaired_payload": "1' AND SLEEP(3) -- -",
+    }
 
-time_entry = {
-    "broken_payload": "1' AND SLEP(3) -- -",
-    "strategy": "SWITCH_TIME",
-    "repaired_payload": "1' AND SLEEP(3) -- -"
-}
+    verified, details = verifier.verify_repair(entry)
 
-verified, details = verifier.verify_repair(
-    time_entry
-)
-
-print("Verified:", verified)
-print(details)
+    assert verified, details
