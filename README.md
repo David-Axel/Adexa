@@ -1,6 +1,3 @@
-Got it. You want **only the README content**, with no introduction or notes, so you can copy-paste it directly.
-
-````markdown
 # ADEXA
 
 > [!WARNING]
@@ -68,10 +65,13 @@ The architecture consists of several main components:
 
 ## Demo
 
-ADEXA receives a security-testing payload, executes it against an authorized test environment, analyzes unsuccessful attempts, generates a repaired candidate, and verifies the result.
+ADEXA receives a security-testing payload, executes it against an authorized test environment, analyzes the unsuccessful attempt, generates a repaired candidate, and verifies the result.
 
-<img width="885" height="496" alt="docs:images:adexa-demo-terminal" src="https://github.com/user-attachments/assets/8e0ae664-7cc4-418b-a455-c2c747e62395" />
-
+<p align="center">
+  <img src="docs/images/adexa-demo-terminal.png"
+       alt="ADEXA SQL injection repair demonstration"
+       width="900">
+</p>
 
 <p align="center">
   <em>ADEXA repairing and verifying a SQL injection payload against the local DVWA laboratory.</em>
