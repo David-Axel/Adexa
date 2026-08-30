@@ -70,11 +70,8 @@ The architecture consists of several main components:
 
 ADEXA receives a security-testing payload, executes it against an authorized test environment, analyzes unsuccessful attempts, generates a repaired candidate, and verifies the result.
 
-<p align="center">
-  <img src="docs/images/adexa-demo-terminal.png"
-       alt="ADEXA payload repair and verification demonstration"
-       width="900">
-</p>
+<img width="885" height="496" alt="docs:images:adexa-demo-terminal" src="https://github.com/user-attachments/assets/8e0ae664-7cc4-418b-a455-c2c747e62395" />
+
 
 <p align="center">
   <em>ADEXA repairing and verifying a SQL injection payload against the local DVWA laboratory.</em>
@@ -481,6 +478,9 @@ python3 adexa.py \
   --payload "'" \
   --method GET
 ```
+
+<img width="922" height="665" alt="Screenshot 2026-08-30 at 23 43 55" src="https://github.com/user-attachments/assets/886787ac-fe46-405f-8af7-82468f12181f" />
+
 
 Advanced Mode provides more detailed execution information, including:
 
