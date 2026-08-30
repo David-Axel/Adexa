@@ -137,6 +137,13 @@ def print_final_summary(run_dir: str, final_state: Dict[str, Any]) -> None:
 
         status = "Success" if verified else "Failed"
 
+        print()
+        print("[ADEXA] Execute ✓")
+        print("[ADEXA] Observe ✓")
+        print("[ADEXA] Analyze ✓")
+        print(f"[ADEXA] Repair → {verified_payload or 'None'}")
+        print(f"[ADEXA] Verify {'✓' if verified else '✗'}")
+        print()
         print(f"[ADEXA] Status: {status}")
         print(f"[ADEXA] Final Payload: {verified_payload or 'None'}")
         print(f"[ADEXA] AI Decision: {ai_reason or friendly_strategy.get(strategy, 'No decision available')}")
