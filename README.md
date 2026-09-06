@@ -428,6 +428,39 @@ docker compose -f compose.yml down
 
 ---
 
+# GUI
+
+ADEXA includes a graphical interface connected directly to the ADEXA execution engine.
+
+The GUI provides:
+
+- New Test configuration
+- Execute → Observe → Analyze → Repair → Verify progress
+- Verification results
+- Repaired payload information
+- Test History
+- Run Details
+- Technical execution output
+
+### Install and launch the GUI
+
+From a fresh clone:
+
+```bash
+git clone https://github.com/David-Axel/Adexa.git
+cd Adexa
+python3 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements-gui.txt
+python3 gui.py
+```
+
+The GUI uses the same ADEXA engine as the command-line interface. It is not a simulated demonstration.
+
+> **Safety:** The GUI is intended only for authorized security testing and controlled laboratory environments.
+
+---
+
 # Usage
 
 > **⚠️ Authorization Required:** The commands and examples below are intended only for systems you own or have explicit authorization to test.
