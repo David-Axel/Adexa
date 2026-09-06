@@ -14,7 +14,18 @@ def verifier():
         password="password",
     )
 
-    if not v.login():
+    try:
+        logged_in = v.login()
+    except Exception as exc:
+        # An unreachable/misconfigured lab (connection reset, DNS failure,
+        # timeout, ...) must skip cleanly, never error the fixture.
+        pytest.skip(
+            "DVWA is not available. "
+            "Start the authorized DVWA laboratory to run integration tests. "
+            f"({exc.__class__.__name__})"
+        )
+
+    if not logged_in:
         pytest.skip(
             "DVWA is not available. "
             "Start the authorized DVWA laboratory to run integration tests."
