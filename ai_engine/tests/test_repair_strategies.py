@@ -7,6 +7,7 @@ import pytest
 os.environ["ADEXA_NO_AI"] = "1"
 
 from ai_engine.poc_ai import (
+    _choose_heuristic_decision,
     _is_structurally_valid_candidate,
     _score_candidate_local,
     _heuristic_ranked_candidates,
@@ -386,3 +387,51 @@ class TestSQLInjectionRepairStrategies:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
+
+
+def test_should_not_repeat_failed_boolean_candidate():
+    payload = "1' AND 1=1 -- -"
+    already_failed = "1' AND '1'='1' -- -"
+
+    observation = {
+        "payload": {
+            "current_payload_raw": payload,
+            "current_payload_normalized": payload,
+        },
+        "payload_features": {
+            "likely_intent": "unknown",
+            "likely_damage_types": ["unknown"],
+        },
+        "constraints": {
+            "allowed_strategies": [
+                "SWITCH_BOOLEAN",
+                "SWITCH_TIME",
+            ]
+        },
+        "attempt_history": [
+            {
+                "payload": already_failed,
+                "error_detected": True,
+                "response_changed": True,
+            }
+        ],
+    }
+
+    result = _choose_heuristic_decision(
+        observation,
+        "previous boolean candidate failed",
+    )
+
+    analysis = result["analysis"]
+
+    print("\nALREADY FAILED:")
+    print(already_failed)
+
+    print("\nSELECTED:")
+    print(analysis["next_payload"])
+
+    print("\nCANDIDATES:")
+    print(analysis["candidate_scores"])
+
+    assert analysis["next_strategy"] == "SWITCH_BOOLEAN"
+    assert analysis["next_payload"] != already_failed

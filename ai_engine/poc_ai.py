@@ -401,9 +401,14 @@ def _heuristic_ranked_candidates(
     strategy: str,
     base_candidates: list[str],
     memory_case: Optional[Dict[str, Any]],
+    attempted_payloads: Optional[set[str]] = None,
 ) -> Tuple[list[Dict[str, Any]], str]:
     ranked = []
+    attempted_payloads = attempted_payloads or set()
+
     for c in base_candidates:
+        if c.strip() in attempted_payloads:
+            continue
         score, reason = _score_candidate_local(
             candidate=c,
             current_payload=current_payload,
@@ -470,6 +475,11 @@ def _choose_heuristic_decision(observation: Dict[str, Any], reason: str) -> Dict
             strategy=strategy,
             base_candidates=base_candidates,
             memory_case=best_memory,
+            attempted_payloads={
+                str(a.get("payload") or "").strip()
+                for a in attempts
+                if isinstance(a, dict) and a.get("payload")
+            },
         )
         chosen = ranked_candidates[0]["payload"] if ranked_candidates else next_payload
 
