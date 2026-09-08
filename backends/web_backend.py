@@ -959,11 +959,18 @@ class WebBackend:
             b = float(elapsed.get(base, 0.0) or 0.0)
             p = float(elapsed.get(probe, 0.0) or 0.0)
             if b > 0 and p > 0 and (p - b) >= min_delta:
-                verified_time = True
+                confirmations = int(state.get("time_probe_confirmations", 0))
+                if not state.get("time_probe_active") or confirmations >= 1:
+                    verified_time = True
 
         web = (obs.extra or {}).get("web") or {}
         if web.get("failure_type") == "time_probe_success":
-            verified_time = True
+            # A single slow request may be caused by server/network jitter.
+            # Require one previous successful timing observation before
+            # accepting the current timing result as verified.
+            confirmations = int(state.get("time_probe_confirmations", 0))
+            if not state.get("time_probe_active") or confirmations >= 1:
+                verified_time = True
 
         verified = verified_boolean or verified_time
         if not verified:
@@ -1148,6 +1155,7 @@ class WebBackend:
                 state["strategy_used"] = "SWITCH_TIME"
                 state["time_probe_active"] = True
                 state["time_probe_attempts"] = 0
+                state["time_probe_confirmations"] = 0
                 state["time_probe_sleep"] = 5
                 state["time_probe_step_id"] = step_id
 
@@ -1219,12 +1227,25 @@ class WebBackend:
 
         if state.get("time_probe_active") and step_id == state.get("time_probe_step_id"):
             if failure == "time_probe_success":
+                confirmations = int(state.get("time_probe_confirmations", 0))
+
+                if confirmations < 1:
+                    state["time_probe_confirmations"] = confirmations + 1
+                    state["strategy_used"] = "TIME_CONFIRMATION_RETRY"
+
+                    return PatchPlan(
+                        root_cause="time_probe_confirmation",
+                        confidence=0.80,
+                        actions=[PatchAction(type="retest", value=None)],
+                        explanation="first successful time probe → repeat once to confirm timing evidence",
+                    )
+
                 state["strategy_used"] = "TIME_CONFIRMED"
                 return PatchPlan(
                     root_cause="time_probe_success",
                     confidence=0.99,
                     actions=[PatchAction(type="advance_step", value=None)],
-                    explanation="time probe worked → advance",
+                    explanation="repeated time probe worked → timing evidence confirmed",
                 )
 
             attempts = int(state.get("time_probe_attempts", 0))

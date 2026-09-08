@@ -334,6 +334,7 @@ def _state_snapshot(state: Dict[str, Any]) -> Dict[str, Any]:
         "selected_payload_reason": state.get("selected_payload_reason"),
         "time_probe_active": state.get("time_probe_active"),
         "time_probe_attempts": state.get("time_probe_attempts"),
+        "time_probe_confirmations": state.get("time_probe_confirmations"),
         "time_probe_sleep": state.get("time_probe_sleep"),
         "time_probe_step_id": state.get("time_probe_step_id"),
         "time_probe_baseline_step": state.get("time_probe_baseline_step"),
