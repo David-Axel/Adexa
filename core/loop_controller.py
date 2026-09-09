@@ -140,11 +140,29 @@ def select_best_candidate(
     current_operator = _detect_boolean_operator(current_payload)
     preferred_style = str(context.get("preferred_style") or "").strip()
 
+    history = list(history or [])
+
     seen_history = {
         _normalize_payload(a.get("normalized_payload") or a.get("payload"))
-        for a in (history or [])
+        for a in history
         if isinstance(a, dict) and (a.get("normalized_payload") or a.get("payload"))
     }
+
+    consecutive_boolean_failures = 0
+    for attempt in reversed(history):
+        if not isinstance(attempt, dict):
+            break
+
+        result = attempt.get("likely_result")
+        attempted_payload = attempt.get("normalized_payload") or attempt.get("payload")
+
+        if (
+            result == "no_boolean_difference"
+            and _detect_payload_family(attempted_payload) == "boolean"
+        ):
+            consecutive_boolean_failures += 1
+        else:
+            break
 
     ranked = []
     seen_candidates = set()
@@ -165,6 +183,12 @@ def select_best_candidate(
 
         family = _detect_payload_family(payload)
         candidate_operator = _detect_boolean_operator(payload)
+
+        if consecutive_boolean_failures >= 2 and family == "boolean":
+            score -= 5.0
+            reasons.append(
+                "recent boolean attempts repeatedly produced no meaningful difference"
+            )
         candidate_tokens = set(payload.lower().split())
         is_quoted = "'" in payload
         is_valid_repair = _looks_like_valid_repair(payload)
