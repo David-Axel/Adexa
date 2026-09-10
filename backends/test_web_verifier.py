@@ -139,3 +139,37 @@ def test_first_time_probe_success_requests_confirmation_retry():
     assert state["time_probe_confirmations"] == 1
     assert state["strategy_used"] == "TIME_CONFIRMATION_RETRY"
     assert any(action.type == "retest" for action in plan.actions)
+
+
+def test_time_probe_gives_up_after_retry_budget():
+    spec = {
+        "base_url": "http://127.0.0.1:4280",
+    }
+
+    backend = WebBackend(spec, "test_time_probe_give_up")
+
+    state = {
+        "time_probe_active": True,
+        "time_probe_attempts": 2,
+        "time_probe_confirmations": 0,
+        "time_probe_sleep": 9,
+        "time_probe_step_id": "probe",
+        "time_probe_baseline_step": "baseline",
+    }
+
+    obs = Observation(
+        mode="web",
+        raw_log_path="",
+        extra={
+            "web": {
+                "step_id": "probe",
+                "failure_type": "ok_or_unknown",
+            }
+        },
+    )
+
+    plan = backend.ai_plan(obs, state)
+
+    assert plan is None
+    assert state["strategy_used"] == "TIME_PROBE_GIVE_UP"
+    assert state["time_probe_active"] is False

@@ -1249,7 +1249,7 @@ class WebBackend:
                 )
 
             attempts = int(state.get("time_probe_attempts", 0))
-            if attempts < 3:
+            if attempts < 2:
                 attempts += 1
                 state["time_probe_attempts"] = attempts
                 sleep_s = int(state.get("time_probe_sleep", 5)) + 2
