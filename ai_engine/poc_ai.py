@@ -451,6 +451,15 @@ def _choose_heuristic_decision(observation: Dict[str, Any], reason: str) -> Dict
     any_changed = any(bool(a.get("response_changed")) for a in attempts)
     tried_time = any("sleep(" in str(a.get("payload") or "").lower() for a in attempts)
 
+    consecutive_boolean_no_difference = 0
+    for attempt in reversed(attempts):
+        if not isinstance(attempt, dict):
+            break
+        if attempt.get("likely_result") == "no_boolean_difference":
+            consecutive_boolean_no_difference += 1
+        else:
+            break
+
     best_memory = _best_memory_case(memory_context)
     used_memory_case = best_memory.get("payload") if isinstance(best_memory, dict) else None
     memory_match_reason = None
@@ -467,6 +476,15 @@ def _choose_heuristic_decision(observation: Dict[str, Any], reason: str) -> Dict
         confidence: float,
         explanation: str,
     ) -> Dict[str, Any]:
+        if consecutive_boolean_no_difference >= 2:
+            failure_reason = (
+                "Repeated boolean probes produced no meaningful response difference."
+            )
+            explanation = (
+                f"Observed {consecutive_boolean_no_difference} consecutive boolean attempts "
+                f"with no meaningful response difference. {explanation}"
+            )
+
         base_candidates = expand_candidates(next_payload, strategy, current)
         ranked_candidates, best_reason = _heuristic_ranked_candidates(
             current_payload=current,

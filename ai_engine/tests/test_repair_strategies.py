@@ -491,3 +491,63 @@ def test_exhausted_boolean_candidates_should_switch_to_time():
 
     assert analysis["next_strategy"] == "SWITCH_TIME"
     assert analysis["next_payload"] not in attempted
+
+
+def test_explanation_uses_repeated_boolean_failure_evidence():
+    observation = {
+        "payload": {
+            "current_payload_raw": "1' AND 1=2 -- -",
+            "current_payload_normalized": "1' AND 1=2 -- -",
+            "looks_quoted_context": True,
+        },
+        "payload_features": {
+            "likely_intent": "boolean_based",
+            "likely_damage_types": ["logical_error"],
+        },
+        "constraints": {
+            "allowed_strategies": [
+                "SWITCH_BOOLEAN",
+                "SWITCH_TIME",
+            ]
+        },
+        "attempt_history": [
+            {
+                "payload": "1' AND 1=2 -- -",
+                "likely_result": "no_boolean_difference",
+                "likely_failure_reason":
+                    "boolean probe did not create a meaningful distinction",
+                "response_changed": False,
+                "error_detected": False,
+            },
+            {
+                "payload": "1' OR 1=2 -- -",
+                "likely_result": "no_boolean_difference",
+                "likely_failure_reason":
+                    "boolean probe did not create a meaningful distinction",
+                "response_changed": False,
+                "error_detected": False,
+            },
+        ],
+    }
+
+    result = _choose_heuristic_decision(
+        observation,
+        "repeated boolean failures",
+    )
+
+    analysis = result["analysis"]
+
+    print("\nFAILURE REASON:", analysis["failure_reason"])
+    print("EXPLANATION:", analysis["explanation"])
+    print("STRATEGY:", analysis["next_strategy"])
+
+    combined = (
+        analysis["failure_reason"] + " " + analysis["explanation"]
+    ).lower()
+
+    assert "boolean" in combined
+    assert (
+        "no meaningful" in combined
+        or "no difference" in combined
+        or "repeated" in combined
+    )
