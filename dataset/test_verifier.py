@@ -16,7 +16,7 @@ def verifier():
 
     try:
         logged_in = v.login()
-    except Exception as exc:
+    except (ConnectionResetError, OSError, TimeoutError) as exc:
         # An unreachable/misconfigured lab (connection reset, DNS failure,
         # timeout, ...) must skip cleanly, never error the fixture.
         pytest.skip(
