@@ -544,3 +544,40 @@ def test_relevant_same_family_memory_is_kept():
 
     assert len(filtered) == 1
     assert filtered[0]["intent"] == "boolean_based"
+
+
+
+def test_cross_family_if_memory_is_rejected():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    result = _filter_relevant_memory_cases(
+        memory_context=[{
+            "payload": "1' AND IF(1=1,SLEEP(5),0) -- -",
+            "intent": "time_based",
+            "strategy_used": "SWITCH_BOOLEAN",
+            "score": 6.5,
+        }],
+        current_payload="1' AND IF(1=1,2,3) -- -",
+        current_intent="boolean_based",
+    )
+
+    assert result == []
+
+
+def test_same_family_if_memory_is_retained():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    memory = {
+        "payload": "1' AND IF(1=1,2,3) -- -",
+        "intent": "boolean_based",
+        "strategy_used": "SWITCH_BOOLEAN",
+        "score": 6.5,
+    }
+
+    result = _filter_relevant_memory_cases(
+        memory_context=[memory],
+        current_payload="1' AND IF(2=2,3,4) -- -",
+        current_intent="boolean_based",
+    )
+
+    assert result == [memory]

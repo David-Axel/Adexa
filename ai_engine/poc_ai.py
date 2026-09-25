@@ -130,7 +130,12 @@ def _filter_relevant_memory_cases(
             continue
 
         # Strong IF/time memory
-        if "if(" in cur and "if(" in payload_lower and score >= 6.0:
+        if (
+            "if(" in cur
+            and "if(" in payload_lower
+            and intent == current_intent
+            and score >= 6.0
+        ):
             filtered.append(case)
             continue
 
