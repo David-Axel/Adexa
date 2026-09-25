@@ -491,3 +491,93 @@ def test_exhausted_boolean_candidates_should_switch_to_time():
 
     assert analysis["next_strategy"] == "SWITCH_TIME"
     assert analysis["next_payload"] not in attempted
+
+
+def test_irrelevant_cross_family_memory_should_be_rejected():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    current_payload = "1' AND 1=2 -- -"
+    current_intent = "boolean_based"
+
+    memory_context = [
+        {
+            "payload": "1' AND SLEEP(5) -- -",
+            "intent": "time_based",
+            "strategy_used": "SWITCH_BOOLEAN",
+            "score": 6.5,
+        }
+    ]
+
+    filtered = _filter_relevant_memory_cases(
+        memory_context=memory_context,
+        current_payload=current_payload,
+        current_intent=current_intent,
+    )
+
+    print("FILTERED MEMORY:", filtered)
+
+    assert filtered == []
+
+
+def test_relevant_same_family_memory_is_kept():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    current_payload = "1' AND 1=2 -- -"
+    current_intent = "boolean_based"
+
+    memory_context = [
+        {
+            "payload": "1' OR '1'='1",
+            "intent": "boolean_based",
+            "strategy_used": "SWITCH_BOOLEAN",
+            "score": 6.5,
+        }
+    ]
+
+    filtered = _filter_relevant_memory_cases(
+        memory_context=memory_context,
+        current_payload=current_payload,
+        current_intent=current_intent,
+    )
+
+    print("FILTERED MEMORY:", filtered)
+
+    assert len(filtered) == 1
+    assert filtered[0]["intent"] == "boolean_based"
+
+
+
+def test_cross_family_if_memory_is_rejected():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    result = _filter_relevant_memory_cases(
+        memory_context=[{
+            "payload": "1' AND IF(1=1,SLEEP(5),0) -- -",
+            "intent": "time_based",
+            "strategy_used": "SWITCH_BOOLEAN",
+            "score": 6.5,
+        }],
+        current_payload="1' AND IF(1=1,2,3) -- -",
+        current_intent="boolean_based",
+    )
+
+    assert result == []
+
+
+def test_same_family_if_memory_is_retained():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    memory = {
+        "payload": "1' AND IF(1=1,2,3) -- -",
+        "intent": "boolean_based",
+        "strategy_used": "SWITCH_BOOLEAN",
+        "score": 6.5,
+    }
+
+    result = _filter_relevant_memory_cases(
+        memory_context=[memory],
+        current_payload="1' AND IF(2=2,3,4) -- -",
+        current_intent="boolean_based",
+    )
+
+    assert result == [memory]

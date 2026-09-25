@@ -130,7 +130,12 @@ def _filter_relevant_memory_cases(
             continue
 
         # Strong IF/time memory
-        if "if(" in cur and "if(" in payload_lower and score >= 6.0:
+        if (
+            "if(" in cur
+            and "if(" in payload_lower
+            and intent == current_intent
+            and score >= 6.0
+        ):
             filtered.append(case)
             continue
 
@@ -145,7 +150,13 @@ def _filter_relevant_memory_cases(
             continue
 
         # Quote-repair memory for broken quote style inputs
-        if "'" in cur and "'" in payload_lower and strategy_used in ("CHANGE_QUOTES", "SWITCH_BOOLEAN") and score >= 5.0:
+        if (
+            "'" in cur
+            and "'" in payload_lower
+            and strategy_used in ("CHANGE_QUOTES", "SWITCH_BOOLEAN")
+            and intent in (current_intent, "unknown")
+            and score >= 5.0
+        ):
             filtered.append(case)
             continue
 
