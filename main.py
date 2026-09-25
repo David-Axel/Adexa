@@ -131,10 +131,6 @@ def print_final_summary(run_dir: str, final_state: Dict[str, Any]) -> None:
 
         verified = bool((last_iter or {}).get("verified", False))
 
-        if baseline_fp and true_fp and false_fp:
-            if true_fp == baseline_fp and false_fp != baseline_fp:
-                verified = True
-
         status = "Success" if verified else "Failed"
 
         print()
