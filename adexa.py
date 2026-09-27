@@ -229,18 +229,22 @@ def run_doctor() -> int:
             checks.append(False)
 
     # Docker Compose
-    compose_result = subprocess.run(
-        ["docker", "compose", "version"],
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-        check=False,
-    )
-    if compose_result.returncode == 0:
-        print("✓ Docker Compose")
-        checks.append(True)
-    else:
+    if docker_path is None:
         print("✗ Docker Compose not available")
         checks.append(False)
+    else:
+        compose_result = subprocess.run(
+            ["docker", "compose", "version"],
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            check=False,
+        )
+        if compose_result.returncode == 0:
+            print("✓ Docker Compose")
+            checks.append(True)
+        else:
+            print("✗ Docker Compose not available")
+            checks.append(False)
 
     # Required local files
     required_files = [
@@ -382,6 +386,18 @@ def run_demo() -> int:
 
     return result.returncode
 
+def _prompt(label: str, default=None) -> str:
+    """Read one line from the user; on EOF/Ctrl-C/IO failure exit cleanly."""
+    try:
+        value = input(label).strip()
+    except (EOFError, KeyboardInterrupt, OSError) as exc:
+        print()
+        print(f"[ADEXA CLI] Cancelled: could not read from the terminal ({type(exc).__name__}).")
+        print("[ADEXA CLI] Pass --url/--param/--payload/--method explicitly, or run `adexa.py doctor`.")
+        raise SystemExit(130)
+    return value if value else default
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="ADEXA - Autonomous Exploit Adaptation CLI"
@@ -421,14 +437,14 @@ def main() -> None:
         print("Configure an authorized DVWA security test.")
         print()
 
-        args.url = input("Target URL: ").strip()
+        args.url = _prompt("Target URL: ")
 
         if not args.url:
             parser.error("Target URL cannot be empty.")
 
-        args.param = input("Parameter [id]: ").strip() or "id"
-        args.payload = input("Initial payload [']: ").strip() or "'"
-        args.method = input("HTTP method [GET]: ").strip().upper() or "GET"
+        args.param = _prompt("Parameter [id]: ", "id")
+        args.payload = _prompt("Initial payload [']: ", "'")
+        args.method = (_prompt("HTTP method [GET]: ", "GET") or "GET").upper()
 
         print()
         print("-" * 50)
@@ -441,9 +457,7 @@ def main() -> None:
         print("-" * 50)
         print()
 
-        confirmation = input(
-            "Start authorized security test? [Y/n]: "
-        ).strip().lower()
+        confirmation = (_prompt("Start authorized security test? [Y/n]: ") or "").lower()
 
         if confirmation not in ("", "y", "yes"):
             print("[ADEXA CLI] Test cancelled.")
