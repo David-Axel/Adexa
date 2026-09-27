@@ -581,3 +581,237 @@ def test_same_family_if_memory_is_retained():
     )
 
     assert result == [memory]
+
+
+def test_filter_memory_handles_malformed_and_invalid_entries():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    # Non-list memory_context inputs should return empty list safely
+    assert _filter_relevant_memory_cases(None, "1' OR '1'='1", "boolean_based") == []
+    assert _filter_relevant_memory_cases({}, "1' OR '1'='1", "boolean_based") == []
+    assert _filter_relevant_memory_cases("invalid", "1' OR '1'='1", "boolean_based") == []
+    assert _filter_relevant_memory_cases([], "1' OR '1'='1", "boolean_based") == []
+
+    # Non-dict items, empty payload, zero/negative score, or invalid score
+    malformed_context = [
+        None,
+        "not-a-dict",
+        12345,
+        [],
+        {"payload": "", "score": 8.0, "intent": "boolean_based"},
+        {"payload": "   ", "score": 8.0, "intent": "boolean_based"},
+        {"payload": "1' OR 1=1", "score": 0.0, "intent": "boolean_based"},
+        {"payload": "1' OR 1=1", "score": -2.5, "intent": "boolean_based"},
+        {"payload": "1' OR 1=1", "score": "invalid_score", "intent": "boolean_based"},
+        {"payload": "1' OR 1=1", "score": None, "intent": "boolean_based"},
+    ]
+
+    result = _filter_relevant_memory_cases(
+        memory_context=malformed_context,
+        current_payload="1' OR 1=1",
+        current_intent="boolean_based",
+    )
+    assert result == []
+
+    # Valid payload and score with missing optional fields (intent, strategy_used)
+    missing_fields_case = {
+        "payload": "1' OR 1=1",
+        "score": 7.5,
+    }
+    # With current_intent="unknown", score >= 7.0 should match
+    result = _filter_relevant_memory_cases(
+        memory_context=[missing_fields_case],
+        current_payload="2' OR 2=2",
+        current_intent="unknown",
+    )
+    assert result == [missing_fields_case]
+
+
+def test_filter_memory_unknown_intent_thresholds():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    case_high = {
+        "payload": "1 AND 1=1",
+        "intent": "unknown",
+        "score": 7.0,
+    }
+    case_low = {
+        "payload": "1 AND 1=1",
+        "intent": "unknown",
+        "score": 6.9,
+    }
+
+    # When current_intent is unknown, threshold is >= 7.0
+    res_high = _filter_relevant_memory_cases([case_high], "2 AND 2=2", "unknown")
+    assert res_high == [case_high]
+
+    res_low = _filter_relevant_memory_cases([case_low], "2 AND 2=2", "unknown")
+    assert res_low == []
+
+    # When current_intent is boolean_based and memory intent is unknown:
+    # Quote-repair with score >= 5.0 and appropriate strategy should match
+    quote_repair_case = {
+        "payload": "1' OR '1'='1",
+        "intent": "unknown",
+        "strategy_used": "CHANGE_QUOTES",
+        "score": 5.0,
+    }
+    res_quote = _filter_relevant_memory_cases(
+        [quote_repair_case],
+        "admin'--",
+        "boolean_based",
+    )
+    assert res_quote == [quote_repair_case]
+
+    # Quote-repair with score < 5.0 is rejected
+    quote_repair_low = {
+        "payload": "1' OR '1'='1",
+        "intent": "unknown",
+        "strategy_used": "CHANGE_QUOTES",
+        "score": 4.9,
+    }
+    res_quote_low = _filter_relevant_memory_cases(
+        [quote_repair_low],
+        "admin'--",
+        "boolean_based",
+    )
+    assert res_quote_low == []
+
+    # Unknown intent without quote-repair strategy is rejected for boolean_based
+    non_quote_case = {
+        "payload": "1 AND 1=1",
+        "intent": "unknown",
+        "strategy_used": "SWITCH_TIME",
+        "score": 6.5,
+    }
+    assert _filter_relevant_memory_cases([non_quote_case], "2 AND 2=2", "boolean_based") == []
+
+
+def test_filter_memory_selects_highest_scoring_eligible_entry():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    entry_low = {
+        "payload": "1' OR 1=1",
+        "intent": "boolean_based",
+        "score": 5.5,
+    }
+    entry_mid = {
+        "payload": "1' OR 2=2",
+        "intent": "boolean_based",
+        "score": 7.2,
+    }
+    entry_best = {
+        "payload": "1' OR 3=3",
+        "intent": "boolean_based",
+        "score": 8.8,
+    }
+    entry_ineligible_high_score = {
+        "payload": "1 AND SLEEP(5)",
+        "intent": "time_based",
+        "score": 9.9,
+    }
+
+    # Should select entry_best (score 8.8) among eligible entries, ignoring ineligible entry with higher score
+    memory_context = [entry_low, entry_ineligible_high_score, entry_best, entry_mid]
+    result = _filter_relevant_memory_cases(
+        memory_context=memory_context,
+        current_payload="1' OR 4=4",
+        current_intent="boolean_based",
+    )
+
+    assert len(result) == 1
+    assert result == [entry_best]
+    assert result[0]["score"] == 8.8
+
+
+def test_filter_memory_handles_duplicate_entries():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    duplicate_entry_1 = {
+        "payload": "1' OR '1'='1",
+        "intent": "boolean_based",
+        "strategy_used": "SWITCH_BOOLEAN",
+        "score": 7.0,
+    }
+    duplicate_entry_2 = {
+        "payload": "1' OR '1'='1",
+        "intent": "boolean_based",
+        "strategy_used": "SWITCH_BOOLEAN",
+        "score": 7.0,
+    }
+
+    result = _filter_relevant_memory_cases(
+        memory_context=[duplicate_entry_1, duplicate_entry_2],
+        current_payload="1' OR 'a'='a",
+        current_intent="boolean_based",
+    )
+
+    # Exactly one best entry is returned, without duplicate entries in output
+    assert len(result) == 1
+    assert result[0]["payload"] == "1' OR '1'='1"
+
+
+def test_filter_memory_high_score_cross_family_rejected():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    # Time-based memory with near-perfect score cannot be selected for boolean_based target
+    time_memory = {
+        "payload": "1 AND SLEEP(5)",
+        "intent": "time_based",
+        "strategy_used": "SWITCH_TIME",
+        "score": 9.8,
+    }
+    res_time = _filter_relevant_memory_cases(
+        memory_context=[time_memory],
+        current_payload="1 AND 1=2",
+        current_intent="boolean_based",
+    )
+    assert res_time == []
+
+    # Boolean memory with near-perfect score cannot be selected for time_based target
+    boolean_memory = {
+        "payload": "1 AND 1=1",
+        "intent": "boolean_based",
+        "strategy_used": "SWITCH_BOOLEAN",
+        "score": 9.8,
+    }
+    res_bool = _filter_relevant_memory_cases(
+        memory_context=[boolean_memory],
+        current_payload="1 AND SLEEP(5)",
+        current_intent="time_based",
+    )
+    assert res_bool == []
+
+
+def test_filter_memory_same_family_threshold_boundaries():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    # time_based threshold is score >= 6.0
+    time_pass = {"payload": "1 AND SLEEP(5)", "intent": "time_based", "score": 6.0}
+    time_fail = {"payload": "1 AND SLEEP(5)", "intent": "time_based", "score": 5.9}
+    assert _filter_relevant_memory_cases([time_pass], "2 AND SLEEP(2)", "time_based") == [time_pass]
+    assert _filter_relevant_memory_cases([time_fail], "2 AND SLEEP(2)", "time_based") == []
+
+    # boolean_based threshold is score >= 5.0
+    bool_pass = {"payload": "1 AND 1=1", "intent": "boolean_based", "score": 5.0}
+    bool_fail = {"payload": "1 AND 1=1", "intent": "boolean_based", "score": 4.9}
+    assert _filter_relevant_memory_cases([bool_pass], "2 AND 2=2", "boolean_based") == [bool_pass]
+    assert _filter_relevant_memory_cases([bool_fail], "2 AND 2=2", "boolean_based") == []
+
+
+def test_filter_memory_exact_payload_match():
+    from ai_engine.poc_ai import _filter_relevant_memory_cases
+
+    # Exact payload matches are kept regardless of differing intent if score > 0
+    exact_case = {
+        "payload": "1' OR 1=1 -- -",
+        "intent": "time_based",
+        "score": 3.0,
+    }
+    result = _filter_relevant_memory_cases(
+        memory_context=[exact_case],
+        current_payload="1' or 1=1 -- -",
+        current_intent="boolean_based",
+    )
+    assert result == [exact_case]
+
