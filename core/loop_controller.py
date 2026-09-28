@@ -285,7 +285,8 @@ def _maybe_select_candidate(plan: PatchPlan, state: Dict[str, Any]) -> None:
     history = state.get("attempt_history") or []
     current_payload = (
         metadata.get("current_payload")
-        or state.get("verified_exploit_payload")
+        or state.get("selected_payload")
+        or state.get("proposed_payload")
         or ""
     )
     preferred_style = "quoted" if "'" in str(current_payload or "") else "numeric"
@@ -329,7 +330,7 @@ def _maybe_select_candidate(plan: PatchPlan, state: Dict[str, Any]) -> None:
     state["candidate_pool"] = candidate_pool
     state["selected_payload"] = selected_payload
     state["selected_payload_reason"] = selection_reason
-    state["verified_exploit_payload"] = selected_payload
+    state["proposed_payload"] = selected_payload
 
     if previous_selected != selected_payload:
         print("[ADEXA] Candidates:")
@@ -383,6 +384,20 @@ def run_loop(backend, state: Dict[str, Any], store, max_iters: int = 6) -> Dict[
         if backend.is_success(state, obs):
             if hasattr(backend, "finalize_success"):
                 state = backend.finalize_success(state, obs)
+
+                # Detection alone does not prove the final payload works.
+                if state.get("verified") is not True:
+                    store.save_iteration(i, {
+                        "iter": i,
+                        "event": "stop",
+                        "reason": "finalization_failed",
+                        "verified": False,
+                        "backend": getattr(backend, "name", "unknown"),
+                        "observation": _safe_dump(obs),
+                        "state": _state_snapshot(state),
+                        "state_keys": sorted(list(state.keys())),
+                    })
+                    return state
 
             store.save_iteration(i, {
                 "iter": i,
