@@ -440,6 +440,46 @@ class WebBackend:
 
         return "no_effect"
 
+    def _record_strategy_feedback(
+        self,
+        state: Dict[str, Any],
+        web: Dict[str, Any],
+    ) -> None:
+        strategy = state.get("strategy_used")
+
+        if not strategy:
+            return
+
+        feedback = state.setdefault("strategy_feedback", {})
+        stats = feedback.setdefault(
+            strategy,
+            {
+                "attempts": 0,
+                "useful_signals": 0,
+            },
+        )
+
+        stats["attempts"] += 1
+
+        response_changed = (
+            web.get("response_fp") is not None
+            and web.get("baseline_fp") is not None
+            and web.get("response_fp") != web.get("baseline_fp")
+        )
+
+        failure_type = web.get("failure_type")
+
+        useful_signal = (
+            failure_type == "time_probe_success"
+            or (
+                failure_type == "ok_or_unknown"
+                and response_changed
+            )
+        )
+
+        if useful_signal:
+            stats["useful_signals"] += 1
+
     def _build_run_summary(self, state: Dict[str, Any]) -> Dict[str, Any]:
         attempts = state.get("attempt_history", [])
         payloads = [self._normalize_payload(a.get("payload")) for a in attempts if a.get("payload")]
@@ -544,6 +584,7 @@ class WebBackend:
                 "looks_quoted_context": "'" in normalized_payload,
             },
             "payload_features": payload_features,
+            "strategy_feedback": state.get("strategy_feedback", {}),
             "response_features": {
                 "status_code": web.get("status"),
                 "elapsed_s": web.get("elapsed_s"),
@@ -884,6 +925,30 @@ class WebBackend:
                     failure_type = "time_probe_success"
 
         state["last_failure_type"] = failure_type
+
+        # Attribute the observed result to the repair strategy that produced
+        # this SQLi execution. Infrastructure/session strategies are excluded.
+        if (
+            executed_payload
+            and state.get("strategy_used")
+            in {"CHANGE_QUOTES", "SWITCH_BOOLEAN", "SWITCH_TIME"}
+        ):
+            baseline_step = (
+                ((self.spec.get("success") or {}).get("boolean_diff") or {})
+                .get("baseline_step")
+            )
+            self._record_strategy_feedback(
+                state,
+                {
+                    "failure_type": failure_type,
+                    "response_fp": fp,
+                    "baseline_fp": (
+                        state.get("response_fingerprints", {}).get(baseline_step)
+                        if baseline_step
+                        else None
+                    ),
+                },
+            )
 
         self._append_log(
             step_id,
