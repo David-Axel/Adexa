@@ -674,6 +674,30 @@ class WebBackend:
             "explanation": "Fallback decision used because AI output was inconsistent.",
         }
 
+    def _validate_ai_decision(
+        self,
+        current_payload: Optional[str],
+        next_strategy: str,
+        next_payload: str,
+        explanation: str,
+    ) -> Dict[str, Any]:
+        if self._ai_output_is_consistent(
+            current_payload,
+            next_strategy,
+            next_payload,
+            explanation,
+        ):
+            return {
+                "next_strategy": next_strategy,
+                "next_payload": next_payload,
+                "explanation": explanation,
+                "used_fallback": False,
+            }
+
+        fallback = self._safe_fallback_decision(current_payload)
+        fallback["used_fallback"] = True
+        return fallback
+
     def finalize_success(self, state: Dict[str, Any], obs: Observation) -> Dict[str, Any]:
         """
         Called only after SQLi has already been verified.
@@ -1130,6 +1154,19 @@ class WebBackend:
                 if next_strategy not in ("CHANGE_QUOTES", "SWITCH_BOOLEAN", "SWITCH_TIME"):
                     next_strategy = "SWITCH_BOOLEAN"
 
+                validated = self._validate_ai_decision(
+                    candidate_payload,
+                    next_strategy,
+                    next_payload,
+                    explanation,
+                )
+                next_strategy = validated["next_strategy"]
+                next_payload = validated["next_payload"]
+                explanation = validated["explanation"]
+
+                if validated["used_fallback"]:
+                    candidates = [next_payload]
+
                 state["strategy_used"] = next_strategy
                 state["proposed_payload"] = next_payload
                 state["ai_reason"] = explanation or "AI repair selected"
@@ -1184,6 +1221,19 @@ class WebBackend:
             if next_strategy not in ("CHANGE_QUOTES", "SWITCH_BOOLEAN", "SWITCH_TIME"):
                 next_strategy = "SWITCH_BOOLEAN"
 
+            validated = self._validate_ai_decision(
+                current_payload,
+                next_strategy,
+                next_payload,
+                explanation,
+            )
+            next_strategy = validated["next_strategy"]
+            next_payload = validated["next_payload"]
+            explanation = validated["explanation"]
+
+            if validated["used_fallback"]:
+                candidates = [next_payload]
+
             state["strategy_used"] = next_strategy
             state["proposed_payload"] = next_payload
             state["ai_reason"] = explanation or "AI repair selected"
@@ -1230,6 +1280,19 @@ class WebBackend:
             candidates = analysis.get("candidates") or ([next_payload] if next_payload else [])
             explanation = analysis.get("explanation") or "AI chose next payload."
             confidence = float(analysis.get("confidence", 0.5) or 0.5)
+
+            validated = self._validate_ai_decision(
+                current_payload,
+                next_strategy,
+                next_payload,
+                explanation,
+            )
+            next_strategy = validated["next_strategy"]
+            next_payload = validated["next_payload"]
+            explanation = validated["explanation"]
+
+            if validated["used_fallback"]:
+                candidates = [next_payload]
 
             if next_strategy == "SWITCH_TIME":
                 state["strategy_used"] = "SWITCH_TIME"
