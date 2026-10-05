@@ -27,7 +27,7 @@ def _extract_user_token(html: str) -> Optional[str]:
 def _extract_security_level(html: str) -> Optional[str]:
     # DVWA shows: Security Level is currently <em>low</em>
     m = re.search(
-        r"Security Level is currently\s*<em>\s*([a-zA-Z]+)\s*</em>", html, re.I)
+        r"Security Level is currently\s*:?\s*<em>\s*([a-zA-Z]+)\s*</em>", html, re.I)
     if m:
         return m.group(1).strip().lower()
 
