@@ -829,6 +829,58 @@ python3 -m pytest -q
 
 ---
 
+# Plotting training metrics
+
+`scripts/plot_training_metrics.py` turns an exported training log into a PNG of training loss (and validation loss, when present) against training steps. It only reads the log file, so it does not need the model and can be run while training is still going.
+
+It needs `matplotlib`, which is not part of the core requirements:
+
+```bash
+pip install matplotlib
+```
+
+Run it on the sample logs:
+
+```bash
+python3 scripts/plot_training_metrics.py examples/training_logs/sample_run.json --output training_curves.png
+```
+
+Options: `--output` (default: `<input name>_curves.png` next to the input) and `--title` (default: the model name).
+
+## Log format
+
+Each record has a `step` plus `train_loss` and/or `val_loss`. Validation loss is usually logged less often, so it can be left out of most records. Records may be in any order; they are sorted by step.
+
+Optional metadata: `model_name`, `dataset_version`, `checkpoint`. They are shown under the plot and skipped if missing.
+
+JSON (`.json`) with the metadata at the top level:
+
+```json
+{
+  "model_name": "adexa-repair-v1",
+  "dataset_version": "2026.05",
+  "checkpoint": "checkpoint-1000",
+  "records": [
+    {"step": 0, "train_loss": 2.73, "val_loss": 2.82},
+    {"step": 50, "train_loss": 2.39}
+  ]
+}
+```
+
+A plain list of records also works. JSON Lines (`.jsonl`) takes one record per line, and the metadata keys can go on any record.
+
+CSV (`.csv`) with a header row; metadata goes in the columns of the same name (the first non-empty value is used):
+
+```text
+step,train_loss,val_loss,model_name,dataset_version,checkpoint
+0,2.7354,2.8293,adexa-repair-v1,2026.05,checkpoint-1000
+50,2.3921,,,,
+```
+
+Empty, malformed or unsupported files print an error and exit with status 1.
+
+---
+
 # Execution Logs
 
 ADEXA creates structured execution artifacts for individual runs.
@@ -886,10 +938,13 @@ ADEXA/
 ├── docs/
 │   └── images/
 │
+├── examples/
+│   └── training_logs/
 ├── exploit_tests/
 ├── gui/
 ├── poc_specs/
 ├── scripts/
+│   ├── plot_training_metrics.py
 │   └── setup_dvwa.sh
 ├── utils/
 ├── web_engine/

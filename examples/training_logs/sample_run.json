@@ -1,0 +1,102 @@
+{
+  "model_name": "adexa-repair-v1",
+  "dataset_version": "2026.05",
+  "checkpoint": "checkpoint-1000",
+  "records": [
+    {
+      "step": 0,
+      "train_loss": 2.7354,
+      "val_loss": 2.8293
+    },
+    {
+      "step": 50,
+      "train_loss": 2.3921
+    },
+    {
+      "step": 100,
+      "train_loss": 2.0599,
+      "val_loss": 2.1447
+    },
+    {
+      "step": 150,
+      "train_loss": 1.8037
+    },
+    {
+      "step": 200,
+      "train_loss": 1.5883,
+      "val_loss": 1.6898
+    },
+    {
+      "step": 250,
+      "train_loss": 1.3768
+    },
+    {
+      "step": 300,
+      "train_loss": 1.214,
+      "val_loss": 1.3225
+    },
+    {
+      "step": 350,
+      "train_loss": 1.0947
+    },
+    {
+      "step": 400,
+      "train_loss": 0.9931,
+      "val_loss": 1.0732
+    },
+    {
+      "step": 450,
+      "train_loss": 0.8833
+    },
+    {
+      "step": 500,
+      "train_loss": 0.8122,
+      "val_loss": 0.9063
+    },
+    {
+      "step": 550,
+      "train_loss": 0.7515
+    },
+    {
+      "step": 600,
+      "train_loss": 0.6909,
+      "val_loss": 0.7821
+    },
+    {
+      "step": 650,
+      "train_loss": 0.606
+    },
+    {
+      "step": 700,
+      "train_loss": 0.5844,
+      "val_loss": 0.717
+    },
+    {
+      "step": 750,
+      "train_loss": 0.5423
+    },
+    {
+      "step": 800,
+      "train_loss": 0.5054,
+      "val_loss": 0.6223
+    },
+    {
+      "step": 850,
+      "train_loss": 0.4723
+    },
+    {
+      "step": 900,
+      "train_loss": 0.4584,
+      "val_loss": 0.5809
+    },
+    {
+      "step": 950,
+      "train_loss": 0.451
+    },
+    {
+      "step": 1000,
+      "train_loss": 0.4249,
+      "val_loss": 0.5442
+    }
+  ]
+}
